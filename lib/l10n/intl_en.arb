@@ -172,6 +172,21 @@
     "type": "String",
     "placeholders": {}
   },
+  "archiveChat": "Archive chat",
+  "@archiveChat": {
+    "type": "String",
+    "placeholders": {}
+  },
+  "archivedChatsTitle": "Archived chats",
+  "@archivedChatsTitle": {
+    "type": "String",
+    "placeholders": {}
+  },
+  "unarchiveChat": "Unarchive chat",
+  "@unarchiveChat": {
+    "type": "String",
+    "placeholders": {}
+  },
   "areGuestsAllowedToJoin": "Are guest users allowed to join",
   "@areGuestsAllowedToJoin": {
     "type": "String",

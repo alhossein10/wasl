@@ -7,6 +7,7 @@ import 'package:matrix/matrix.dart';
 
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/pages/archive/archive.dart';
+import 'package:fluffychat/pages/archived_chats/archived_chats.dart';
 import 'package:fluffychat/pages/bootstrap/bootstrap_dialog.dart';
 import 'package:fluffychat/pages/chat/chat.dart';
 import 'package:fluffychat/pages/chat_access_settings/chat_access_settings_controller.dart';
@@ -139,6 +140,15 @@ abstract class AppRoutes {
                   ),
           ),
           routes: [
+            GoRoute(
+              path: 'archivedchats',
+              pageBuilder: (context, state) => defaultPageBuilder(
+                context,
+                state,
+                const ArchivedChats(),
+              ),
+              redirect: loggedOutRedirect,
+            ),
             GoRoute(
               path: 'archive',
               pageBuilder: (context, state) =>

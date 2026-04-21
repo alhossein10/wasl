@@ -63,6 +63,21 @@
         "type": "String",
         "placeholders": {}
     },
+    "archiveChat": "أرشفة المحادثة",
+    "@archiveChat": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "archivedChatsTitle": "المحادثات المؤرشفة",
+    "@archivedChatsTitle": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "unarchiveChat": "إلغاء أرشفة المحادثة",
+    "@unarchiveChat": {
+        "type": "String",
+        "placeholders": {}
+    },
     "areGuestsAllowedToJoin": "هل يُسمح للزوار الدخول",
     "@areGuestsAllowedToJoin": {
         "type": "String",

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'package:async/async.dart';
+import 'package:go_router/go_router.dart';
 import 'package:matrix/matrix.dart';
 
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_list/chat_list.dart';
 import 'package:fluffychat/pages/chat_list/client_chooser_button.dart';
+import 'package:fluffychat/utils/archived_chats.dart';
 import 'package:fluffychat/utils/sync_status_localization.dart';
 import 'package:fluffychat/widgets/app_text_field.dart';
 import '../../widgets/matrix.dart';
@@ -26,26 +29,34 @@ class ChatListHeader extends StatelessWidget implements PreferredSizeWidget {
     final colorScheme = theme.colorScheme;
     final client = Matrix.of(context).client;
 
-    return SliverAppBar(
-      floating: true,
-      toolbarHeight: 118,
-      pinned: FluffyThemes.isColumnMode(context),
-      scrolledUnderElevation: 0,
-      surfaceTintColor: Colors.transparent,
-      backgroundColor: colorScheme.surface,
-      automaticallyImplyLeading: false,
-      titleSpacing: 16,
-      title: StreamBuilder(
-        stream: client.onSyncStatus.stream,
-        builder: (context, snapshot) {
-          final status =
-              client.onSyncStatus.value ??
-              const SyncStatusUpdate(SyncStatus.waitingForResponse);
-          final hide =
-              client.onSync.value != null &&
-              status.status != SyncStatus.error &&
-              client.prevBatch != null;
-          return Column(
+    return StreamBuilder(
+      stream: StreamGroup.merge<dynamic>([
+        client.onSync.stream,
+        client.onSyncStatus.stream,
+      ]),
+      builder: (context, snapshot) {
+        final status =
+            client.onSyncStatus.value ??
+            const SyncStatusUpdate(SyncStatus.waitingForResponse);
+        final hide =
+            client.onSync.value != null &&
+            status.status != SyncStatus.error &&
+            client.prevBatch != null;
+        final showArchiveLink =
+            hide &&
+            !controller.isSearchMode &&
+            client.archivedChatRoomIds.isNotEmpty;
+
+        return SliverAppBar(
+          floating: true,
+          toolbarHeight: showArchiveLink ? 164 : 118,
+          pinned: FluffyThemes.isColumnMode(context),
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          backgroundColor: colorScheme.surface,
+          automaticallyImplyLeading: false,
+          titleSpacing: 16,
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
@@ -133,29 +144,35 @@ class ChatListHeader extends StatelessWidget implements PreferredSizeWidget {
                               ),
                             )
                           : null
-                    /*  
-                          TextButton.icon(
-                              onPressed: controller.setServer,
-                              style: TextButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                                textStyle: const TextStyle(fontSize: 12),
-                              ),
-                              icon: const Icon(Icons.edit_outlined, size: 16),
-                              label: Text(
-                                controller.searchServer ??
-                                    Matrix.of(context).client.homeserver!.host,
-                                maxLines: 2,
-                              ),
-                            )
-                  */
                     : const SizedBox.shrink(),
               ),
+              if (showArchiveLink)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        alignment: AlignmentDirectional.center,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ),
+                      onPressed: () => context.go('/rooms/archivedchats'),
+                      icon: Icon(
+                        Icons.archive_outlined,
+                        size: 20,
+                        color: colorScheme.primary,
+                      ),
+                      label: Text(L10n.of(context).archivedChatsTitle),
+                    ),
+                  ),
+                ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 

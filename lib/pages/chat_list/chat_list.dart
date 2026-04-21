@@ -24,7 +24,8 @@ import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart'
 import 'package:fluffychat/widgets/avatar.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:fluffychat/widgets/share_scaffold_dialog.dart';
-import '../../../utils/account_bundles.dart';
+import 'package:fluffychat/utils/account_bundles.dart';
+import 'package:fluffychat/utils/archived_chats.dart';
 import '../../config/setting_keys.dart';
 import '../../utils/url_launcher.dart';
 import '../../widgets/matrix.dart';
@@ -206,13 +207,16 @@ class ChatListController extends State<ChatList>
 
   List<Room> get filteredRooms {
     final client = Matrix.of(context).client;
+    final archived = client.archivedChatRoomIds;
     final locals = MatrixLocals(L10n.of(context));
-    return client.rooms.where(getRoomFilterByActiveFilter(activeFilter)).where((
-      room,
-    ) {
-      final displayName = room.getLocalizedDisplayname(locals);
-      return !isDefaultMatrixOrgRoom(room, displayName);
-    }).toList();
+    return client.rooms
+        .where(getRoomFilterByActiveFilter(activeFilter))
+        .where((room) {
+          final displayName = room.getLocalizedDisplayname(locals);
+          return !isDefaultMatrixOrgRoom(room, displayName);
+        })
+        .where((room) => !archived.contains(room.id))
+        .toList();
   }
 
   bool isSearchMode = false;
@@ -619,6 +623,20 @@ class ChatListController extends State<ChatList>
               ),
             ),
         ],
+        if ((room.membership == Membership.join ||
+                room.membership == Membership.invite) &&
+            !room.isSpace)
+          PopupMenuItem(
+            value: ChatContextAction.archiveChat,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.archive_outlined),
+                const SizedBox(width: 12),
+                Text(L10n.of(context).archiveChat),
+              ],
+            ),
+          ),
         PopupMenuItem(
           value: ChatContextAction.leave,
           child: Row(
@@ -704,6 +722,14 @@ class ChatListController extends State<ChatList>
           '/rooms/settings/security/ignorelist',
           extra: inviteEvent?.senderId,
         );
+        return;
+      case ChatContextAction.archiveChat:
+        await showFutureLoadingDialog(
+          context: context,
+          future: () => room.client.archiveChatRoom(room.id),
+        );
+        if (mounted) setState(() {});
+        return;
       case ChatContextAction.leave:
         final confirmed = await showOkCancelAlertDialog(
           context: context,
@@ -949,6 +975,7 @@ enum ChatContextAction {
   favorite,
   markUnread,
   mute,
+  archiveChat,
   leave,
   addToSpace,
   block,
