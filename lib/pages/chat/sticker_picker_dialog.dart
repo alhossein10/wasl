@@ -143,15 +143,15 @@ class StickerPickerDialogState extends State<StickerPickerDialog> {
                     mainAxisSize: .min,
                     children: [
                       Text(L10n.of(context).noEmotesFound),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: () => UrlLauncher(
-                          context,
-                          AppConfig.howDoIGetStickersTutorial,
-                        ).launchUrl(),
-                        icon: const Icon(Icons.explore_outlined),
-                        label: Text(L10n.of(context).discover),
-                      ),
+                      // const SizedBox(height: 12),
+                      // OutlinedButton.icon(
+                      //   onPressed: () => UrlLauncher(
+                      //     context,
+                      //     AppConfig.howDoIGetStickersTutorial,
+                      //   ).launchUrl(),
+                      //   icon: const Icon(Icons.explore_outlined),
+                      //   label: Text(L10n.of(context).discover),
+                      // ),
                     ],
                   ),
                 ),
