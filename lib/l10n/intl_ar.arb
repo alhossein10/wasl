@@ -1729,8 +1729,6 @@
     },
     "addToSpace": "أضف إلى المساحة",
     "@addToSpace": {},
-    "addToFolder": "أضف إلى المجلد",
-    "@addToFolder": {},
     "addEmail": "أضف بريدًا إلكترونيًا",
     "@addEmail": {
         "type": "String",
@@ -2700,8 +2698,6 @@
     "@sendTypingNotifications": {},
     "createGroup": "إنشاء مجموعة",
     "@createGroup": {},
-    "createFolder": "إنشاء مجلد",
-    "@createFolder": {},
     "messagesStyle": "الرسائل:",
     "@messagesStyle": {},
     "shareInviteLink": "شارك رابط الدعوة",

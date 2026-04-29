@@ -14,13 +14,10 @@ import 'package:fluffychat/pages/chat_list/space_view.dart';
 import 'package:fluffychat/pages/chat_list/status_msg_list.dart';
 import 'package:fluffychat/utils/stream_extension.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/public_room_dialog.dart';
-import 'package:fluffychat/widgets/adaptive_dialogs/show_modal_action_popup.dart';
 import 'package:fluffychat/widgets/avatar.dart';
 import '../../config/themes.dart';
 import '../../widgets/adaptive_dialogs/user_dialog.dart';
 import '../../widgets/matrix.dart';
-import '../../utils/filter_item.dart';
-import '../../utils/chat_folder.dart';
 import 'chat_list_header.dart';
 
 /// Parses [AppSettings.defaultHomeserver] to a host.
@@ -52,23 +49,6 @@ class ChatListViewBody extends StatelessWidget {
   final ChatListController controller;
 
   const ChatListViewBody(this.controller, {super.key});
-
-  void _showFolderMenu(BuildContext context, ChatFolder folder) {
-    showModalActionPopup(
-      context: context,
-      title: folder.name,
-      actions: [
-        AdaptiveModalAction(value: 'edit', label: 'Edit'),
-        AdaptiveModalAction(value: 'delete', label: 'Delete'),
-      ],
-    ).then((action) {
-      if (action == 'edit') {
-        controller.editFolder(folder);
-      } else if (action == 'delete') {
-        controller.deleteFolder(folder.id);
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -196,69 +176,46 @@ class ChatListViewBody extends StatelessWidget {
                   if (client.rooms.isNotEmpty && !controller.isSearchMode)
                     SizedBox(
                       height: 56,
-                      child: SingleChildScrollView(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
+                        shrinkWrap: true,
                         scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            ...[
-                              if (AppSettings.separateChatTypes.value)
-                                BuiltInFilter(ActiveFilter.messages)
-                              else
-                                BuiltInFilter(ActiveFilter.allChats),
-                              BuiltInFilter(ActiveFilter.groups),
-                              BuiltInFilter(ActiveFilter.calls),
-                              BuiltInFilter(ActiveFilter.unread),
-                              if (spaceDelegateCandidates.isNotEmpty &&
-                                  !AppSettings.displayNavigationRail.value &&
-                                  !FluffyThemes.isColumnMode(context))
-                                BuiltInFilter(ActiveFilter.spaces),
-                            ].map(
-                              (filter) => Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4.0,
-                                ),
-                                child: FilterChip(
-                                  selected: filter == controller.activeFilter,
-                                  onSelected: (_) =>
-                                      controller.setActiveFilter(filter),
-                                  label: Text(
-                                    filter.toLocalizedString(context),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            ReorderableListView(
-                              scrollDirection: Axis.horizontal,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              onReorder: controller.reorderFolders,
-                              children: controller.folders
-                                  .map(
-                                    (folder) => Padding(
-                                      key: ValueKey(folder.id),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4.0,
-                                      ),
-                                      child: GestureDetector(
-                                        onLongPress: () =>
-                                            _showFolderMenu(context, folder),
-                                        child: FilterChip(
-                                          selected:
-                                              FolderFilterItem(folder) ==
-                                              controller.activeFilter,
-                                          onSelected: (_) =>
-                                              controller.setActiveFilter(
-                                                FolderFilterItem(folder),
-                                              ),
-                                          label: Text(folder.name),
-                                        ),
+                        children:
+                            [
+                                  if (AppSettings.separateChatTypes.value)
+                                    ActiveFilter.messages
+                                  else
+                                    ActiveFilter.allChats,
+                                  ActiveFilter.groups,
+                                  ActiveFilter.calls,
+                                  ActiveFilter.unread,
+                                  if (spaceDelegateCandidates.isNotEmpty &&
+                                      !AppSettings
+                                          .displayNavigationRail
+                                          .value &&
+                                      !FluffyThemes.isColumnMode(context))
+                                    ActiveFilter.spaces,
+                                ]
+                                .map(
+                                  (filter) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4.0,
+                                    ),
+                                    child: FilterChip(
+                                      selected:
+                                          filter == controller.activeFilter,
+                                      onSelected: (_) =>
+                                          controller.setActiveFilter(filter),
+                                      label: Text(
+                                        filter.toLocalizedString(context),
                                       ),
                                     ),
-                                  )
-                                  .toList(),
-                            ),
-                          ],
-                        ),
+                                  ),
+                                )
+                                .toList(),
                       ),
                     ),
                   if (controller.isSearchMode)

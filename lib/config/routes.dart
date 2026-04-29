@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:fluffychat/pages/settings_style/settings_style.dart';
 import 'package:flutter/material.dart';
 
 import 'package:go_router/go_router.dart';
@@ -34,7 +33,7 @@ import 'package:fluffychat/pages/settings_ignore_list/settings_ignore_list.dart'
 import 'package:fluffychat/pages/settings_notifications/settings_notifications.dart';
 import 'package:fluffychat/pages/settings_password/settings_password.dart';
 import 'package:fluffychat/pages/settings_security/settings_security.dart';
-import 'package:fluffychat/pages/settings_folders/settings_folders.dart';
+import 'package:fluffychat/pages/settings_style/settings_style.dart';
 import 'package:fluffychat/widgets/config_viewer.dart';
 import 'package:fluffychat/widgets/layouts/empty_page.dart';
 import 'package:fluffychat/widgets/layouts/two_column_layout.dart';
@@ -69,8 +68,11 @@ abstract class AppRoutes {
     ),
     GoRoute(
       path: '/home',
-      pageBuilder: (context, state) =>
-          defaultPageBuilder(context, state, const DirectLoginPage()),
+      pageBuilder: (context, state) => defaultPageBuilder(
+        context,
+        state,
+        const DirectLoginPage(),
+      ),
       redirect: loggedInRedirect,
       routes: [
         GoRoute(
@@ -140,8 +142,11 @@ abstract class AppRoutes {
           routes: [
             GoRoute(
               path: 'archivedchats',
-              pageBuilder: (context, state) =>
-                  defaultPageBuilder(context, state, const ArchivedChats()),
+              pageBuilder: (context, state) => defaultPageBuilder(
+                context,
+                state,
+                const ArchivedChats(),
+              ),
               redirect: loggedOutRedirect,
             ),
             GoRoute(
@@ -231,15 +236,6 @@ abstract class AppRoutes {
                         context,
                         state,
                         const DevicesSettings(),
-                      ),
-                      redirect: loggedOutRedirect,
-                    ),
-                    GoRoute(
-                      path: 'folders',
-                      pageBuilder: (context, state) => defaultPageBuilder(
-                        context,
-                        state,
-                        const SettingsFolders(),
                       ),
                       redirect: loggedOutRedirect,
                     ),
