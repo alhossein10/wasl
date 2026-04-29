@@ -91,6 +91,8 @@
   "@addChatDescription": {},
   "addToSpace": "Add to space",
   "@addToSpace": {},
+  "addToFolder": "Add to folder",
+  "@addToFolder": {},
   "admin": "Admin",
   "@admin": {
     "type": "String",
@@ -761,6 +763,8 @@
   },
   "createGroup": "Create group",
   "@createGroup": {},
+  "createFolder": "Create folder",
+  "@createFolder": {},
   "createNewSpace": "New space",
   "@createNewSpace": {
     "type": "String",
