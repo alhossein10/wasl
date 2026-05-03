@@ -39,6 +39,16 @@ class ClientChooserButton extends StatelessWidget {
           ],
         ),
       ),
+      PopupMenuItem(
+        value: SettingsAction.newFolder,
+        child: Row(
+          children: [
+            const Icon(Icons.folder_outlined),
+            const SizedBox(width: 18),
+            Text(L10n.of(context).createFolder),
+          ],
+        ),
+      ),
       // PopupMenuItem(
       //   value: SettingsAction.setStatus,
       //   child: Row(
@@ -217,6 +227,9 @@ class ClientChooserButton extends StatelessWidget {
         case SettingsAction.newGroup:
           context.go('/rooms/newgroup');
           break;
+        case SettingsAction.newFolder:
+          controller.createFolder(context);
+          break;
         case SettingsAction.invite:
           FluffyShare.shareInviteLink(context);
           break;
@@ -240,6 +253,7 @@ class ClientChooserButton extends StatelessWidget {
 enum SettingsAction {
   addAccount,
   newGroup,
+  newFolder,
   setStatus,
   invite,
   support,

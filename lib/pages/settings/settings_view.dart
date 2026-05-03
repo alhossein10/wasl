@@ -206,6 +206,14 @@ class SettingsView extends StatelessWidget {
                         : null,
                   ),
                   ListTile(
+                    leading: const Icon(Icons.folder_outlined),
+                    title: const Text('Manage Folders'),
+                    onTap: () => context.go('/rooms/settings/folders'),
+                    tileColor: activeRoute.startsWith('/rooms/settings/folders')
+                        ? theme.colorScheme.surfaceContainerHigh
+                        : null,
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.forum_outlined),
                     title: Text(L10n.of(context).chat),
                     onTap: () => context.go('/rooms/settings/chat'),

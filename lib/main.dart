@@ -79,8 +79,10 @@ void main() async {
 Future<void> _initializeCrypto() async {
   if (kIsWeb) {
     await _validateWebCryptoAssets();
+    await vod.init(wasmPath: _vodozemacWebWasmPath);
+    return;
   }
-  await vod.init(wasmPath: _vodozemacWebWasmPath);
+  await vod.init();
 }
 
 Future<void> _validateWebCryptoAssets() async {

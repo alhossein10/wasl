@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fluffychat/utils/chat_folder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -26,9 +27,11 @@ import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:fluffychat/widgets/share_scaffold_dialog.dart';
 import 'package:fluffychat/utils/account_bundles.dart';
 import 'package:fluffychat/utils/archived_chats.dart';
-import '../../config/setting_keys.dart';
-import '../../utils/url_launcher.dart';
+import '../../utils/filter_item.dart';
+import '../../utils/folders_manager.dart';
 import '../../widgets/matrix.dart';
+import 'package:fluffychat/config/setting_keys.dart';
+import 'package:fluffychat/utils/url_launcher.dart';
 
 enum PopupMenuAction {
   settings,
@@ -38,8 +41,6 @@ enum PopupMenuAction {
   setStatus,
   archive,
 }
-
-enum ActiveFilter { allChats, messages, groups, calls, unread, spaces }
 
 const Set<String> _elementCallRoomTypes = {
   'm.call',
@@ -71,25 +72,6 @@ bool isElementCallRoom(Room room) {
   return room.states.keys.any((eventType) => eventType.startsWith('m.call.'));
 }
 
-extension LocalizedActiveFilter on ActiveFilter {
-  String toLocalizedString(BuildContext context) {
-    switch (this) {
-      case ActiveFilter.allChats:
-        return L10n.of(context).all;
-      case ActiveFilter.messages:
-        return L10n.of(context).messages;
-      case ActiveFilter.groups:
-        return L10n.of(context).groups;
-      case ActiveFilter.calls:
-        return L10n.of(context).calls;
-      case ActiveFilter.unread:
-        return L10n.of(context).unread;
-      case ActiveFilter.spaces:
-        return L10n.of(context).spaces;
-    }
-  }
-}
-
 class ChatList extends StatefulWidget {
   static BuildContext? contextForVoip;
   final String? activeChat;
@@ -115,7 +97,11 @@ class ChatListController extends State<ChatList>
 
   StreamSubscription? _intentUriStreamSubscription;
 
-  late ActiveFilter activeFilter;
+  late FilterItem activeFilter;
+
+  List<ChatFolder> folders = [];
+
+  StreamSubscription<List<ChatFolder>>? _foldersSubscription;
 
   String? _activeSpaceId;
   String? get activeSpaceId => _activeSpaceId;
@@ -209,8 +195,19 @@ class ChatListController extends State<ChatList>
     final client = Matrix.of(context).client;
     final archived = client.archivedChatRoomIds;
     final locals = MatrixLocals(L10n.of(context));
+    bool filterFunction(Room room) {
+      if (activeFilter is BuiltInFilter) {
+        return getRoomFilterByActiveFilter(
+          (activeFilter as BuiltInFilter).filter,
+        )(room);
+      } else if (activeFilter is FolderFilterItem) {
+        return (activeFilter as FolderFilterItem).matches(room);
+      }
+      return true;
+    }
+
     return client.rooms
-        .where(getRoomFilterByActiveFilter(activeFilter))
+        .where(filterFunction)
         .where((room) {
           final displayName = room.getLocalizedDisplayname(locals);
           return !isDefaultMatrixOrgRoom(room, displayName);
@@ -438,9 +435,17 @@ class ChatListController extends State<ChatList>
 
   @override
   void initState() {
-    activeFilter = AppSettings.separateChatTypes.value
-        ? ActiveFilter.messages
-        : ActiveFilter.allChats;
+    activeFilter = BuiltInFilter(
+      AppSettings.separateChatTypes.value
+          ? ActiveFilter.messages
+          : ActiveFilter.allChats,
+    );
+    () async {
+      await _loadFolders();
+      _foldersSubscription = FoldersManager.foldersStream.listen((newFolders) {
+        if (mounted) setState(() => folders = newFolders);
+      });
+    }();
     _initReceiveSharingIntent();
     _activeSpaceId = widget.activeSpace;
 
@@ -465,11 +470,81 @@ class ChatListController extends State<ChatList>
     super.initState();
   }
 
+  Future<void> _loadFolders() async {
+    folders = await FoldersManager.getFolders();
+    if (mounted) setState(() {});
+  }
+
+  void reorderFolders(int oldIndex, int newIndex) async {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final folder = folders.removeAt(oldIndex);
+    folders.insert(newIndex, folder);
+    await FoldersManager.saveFolders(folders);
+    setState(() {});
+  }
+
+  void editFolder(ChatFolder folder) async {
+    final newName = await showTextInputDialog(
+      context: context,
+      title: 'Edit Folder',
+      hintText: L10n.of(context).name,
+      initialText: folder.name,
+      okLabel: 'Save',
+      cancelLabel: L10n.of(context).cancel,
+    );
+    if (newName != null && newName.isNotEmpty && newName != folder.name) {
+      final updatedFolder = ChatFolder(
+        id: folder.id,
+        name: newName,
+        roomIds: folder.roomIds,
+      );
+      await FoldersManager.updateFolder(updatedFolder);
+      _loadFolders();
+    }
+  }
+
+  void deleteFolder(String id) async {
+    final confirmed = await showOkCancelAlertDialog(
+      context: context,
+      title: 'Delete Folder',
+      message: 'Are you sure you want to delete this folder?',
+      okLabel: L10n.of(context).delete,
+      cancelLabel: L10n.of(context).cancel,
+      isDestructive: true,
+    );
+    if (confirmed == OkCancelResult.ok) {
+      await FoldersManager.deleteFolder(id);
+      _loadFolders();
+    }
+  }
+
+  void createFolder(BuildContext context) async {
+    final result = await showTextInputDialog(
+      context: context,
+      title: L10n.of(context).createFolder,
+      hintText: L10n.of(context).name,
+      okLabel: L10n.of(context).create,
+      cancelLabel: L10n.of(context).cancel,
+    );
+    if (result != null && result.isNotEmpty) {
+      final folder = ChatFolder(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: result,
+        roomIds: [],
+      );
+      await FoldersManager.addFolder(folder);
+      _loadFolders();
+    }
+  }
+
   @override
   void dispose() {
     _intentDataStreamSubscription?.cancel();
     _intentFileStreamSubscription?.cancel();
     _intentUriStreamSubscription?.cancel();
+    _foldersSubscription?.cancel();
     scrollController.removeListener(_onScroll);
     super.dispose();
   }
@@ -622,6 +697,17 @@ class ChatListController extends State<ChatList>
                 ],
               ),
             ),
+          PopupMenuItem(
+            value: ChatContextAction.addToFolder,
+            child: Row(
+              mainAxisSize: .min,
+              children: [
+                const Icon(Icons.folder_outlined),
+                const SizedBox(width: 12),
+                Text(L10n.of(context).addToFolder),
+              ],
+            ),
+          ),
         ],
         if ((room.membership == Membership.join ||
                 room.membership == Membership.invite) &&
@@ -765,6 +851,22 @@ class ChatListController extends State<ChatList>
           context: context,
           future: () => space.setSpaceChild(room.id),
         );
+        return;
+      case ChatContextAction.addToFolder:
+        final folder = await showModalActionPopup(
+          context: context,
+          title: 'Folder',
+          actions: folders
+              .map(
+                (folder) =>
+                    AdaptiveModalAction(value: folder, label: folder.name),
+              )
+              .toList(),
+        );
+        if (folder == null) return;
+        await FoldersManager.addRoomToFolder(folder.id, room.id);
+        _loadFolders();
+        return;
     }
   }
 
@@ -859,7 +961,7 @@ class ChatListController extends State<ChatList>
     }
   }
 
-  void setActiveFilter(ActiveFilter filter) {
+  void setActiveFilter(FilterItem filter) {
     setState(() {
       activeFilter = filter;
     });
@@ -868,7 +970,7 @@ class ChatListController extends State<ChatList>
   void setActiveClient(Client client) {
     context.go('/rooms');
     setState(() {
-      activeFilter = ActiveFilter.allChats;
+      activeFilter = BuiltInFilter(ActiveFilter.allChats);
       _activeSpaceId = null;
       Matrix.of(context).setActiveClient(client);
     });
@@ -978,5 +1080,6 @@ enum ChatContextAction {
   archiveChat,
   leave,
   addToSpace,
+  addToFolder,
   block,
 }
