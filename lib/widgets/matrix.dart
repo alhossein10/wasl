@@ -14,7 +14,6 @@ import 'package:matrix/matrix.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:universal_html/html.dart' as html;
-import 'package:url_launcher/url_launcher_string.dart';
 
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/utils/client_manager.dart';
@@ -346,17 +345,9 @@ class MatrixState extends State<Matrix> with WidgetsBindingObserver {
                 context,
             title: L10n.of(context).pushNotificationsNotAvailable,
             message: errorMsg,
-            okLabel: link == null
-                ? L10n.of(context).ok
-                : L10n.of(context).learnMore,
+            okLabel: L10n.of(context).ok,
             cancelLabel: L10n.of(context).doNotShowAgain,
           );
-          if (result == OkCancelResult.ok && link != null) {
-            launchUrlString(
-              link.toString(),
-              mode: LaunchMode.externalApplication,
-            );
-          }
           if (result == OkCancelResult.cancel) {
             await AppSettings.showNoGoogle.setItem(true);
           }
