@@ -78,6 +78,36 @@
         "type": "String",
         "placeholders": {}
     },
+    "folders": "المجلدات",
+    "@folders": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "manageFolders": "إدارة المجلدات",
+    "@manageFolders": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "newFolder": "مجلد جديد",
+    "@newFolder": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "renameFolder": "إعادة تسمية المجلد",
+    "@renameFolder": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "deleteFolderConfirm": "سيتم حذف هذا المجلد. لن يتم حذف المحادثات.",
+    "@deleteFolderConfirm": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "reorderFolders": "إعادة ترتيب المجلدات",
+    "@reorderFolders": {
+        "type": "String",
+        "placeholders": {}
+    },
     "areGuestsAllowedToJoin": "هل يُسمح للزوار الدخول",
     "@areGuestsAllowedToJoin": {
         "type": "String",

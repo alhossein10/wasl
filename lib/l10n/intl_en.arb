@@ -187,6 +187,36 @@
     "type": "String",
     "placeholders": {}
   },
+  "folders": "Folders",
+  "@folders": {
+    "type": "String",
+    "placeholders": {}
+  },
+  "manageFolders": "Manage folders",
+  "@manageFolders": {
+    "type": "String",
+    "placeholders": {}
+  },
+  "newFolder": "New folder",
+  "@newFolder": {
+    "type": "String",
+    "placeholders": {}
+  },
+  "renameFolder": "Rename folder",
+  "@renameFolder": {
+    "type": "String",
+    "placeholders": {}
+  },
+  "deleteFolderConfirm": "This folder will be deleted. Chats won't be deleted.",
+  "@deleteFolderConfirm": {
+    "type": "String",
+    "placeholders": {}
+  },
+  "reorderFolders": "Reorder folders",
+  "@reorderFolders": {
+    "type": "String",
+    "placeholders": {}
+  },
   "areGuestsAllowedToJoin": "Are guest users allowed to join",
   "@areGuestsAllowedToJoin": {
     "type": "String",

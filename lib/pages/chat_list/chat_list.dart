@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:app_links/app_links.dart';
+import 'package:collection/collection.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter_shortcuts_new/flutter_shortcuts_new.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +17,7 @@ import 'package:fluffychat/pages/chat_list/chat_list_view.dart';
 import 'package:fluffychat/utils/localized_exception_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
+import 'package:fluffychat/utils/chat_folders.dart';
 import 'package:fluffychat/utils/show_scaffold_dialog.dart';
 import 'package:fluffychat/utils/show_update_snackbar.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_modal_action_popup.dart';
@@ -117,8 +119,14 @@ class ChatListController extends State<ChatList>
 
   late ActiveFilter activeFilter;
 
+  String? activeFolderId;
+
   String? _activeSpaceId;
   String? get activeSpaceId => _activeSpaceId;
+
+  void setActiveFolder(String? folderId) => setState(() {
+        activeFolderId = folderId;
+      });
 
   void setActiveSpace(String spaceId) async {
     await Matrix.of(context).client.getRoomById(spaceId)!.postLoad();
@@ -208,6 +216,12 @@ class ChatListController extends State<ChatList>
   List<Room> get filteredRooms {
     final client = Matrix.of(context).client;
     final archived = client.archivedChatRoomIds;
+    final folderRoomIds = activeFolderId == null
+        ? null
+        : client.chatFolders
+            .firstWhereOrNull((f) => f.id == activeFolderId)
+            ?.roomIds
+            .toSet();
     final locals = MatrixLocals(L10n.of(context));
     return client.rooms
         .where(getRoomFilterByActiveFilter(activeFilter))
@@ -216,6 +230,7 @@ class ChatListController extends State<ChatList>
           return !isDefaultMatrixOrgRoom(room, displayName);
         })
         .where((room) => !archived.contains(room.id))
+        .where((room) => folderRoomIds == null || folderRoomIds.contains(room.id))
         .toList();
   }
 
@@ -637,6 +652,18 @@ class ChatListController extends State<ChatList>
               ],
             ),
           ),
+        if (room.membership == Membership.join && !room.isSpace)
+          PopupMenuItem(
+            value: ChatContextAction.folders,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.folder_outlined),
+                const SizedBox(width: 12),
+                Text(L10n.of(context).folders),
+              ],
+            ),
+          ),
         PopupMenuItem(
           value: ChatContextAction.leave,
           child: Row(
@@ -713,6 +740,9 @@ class ChatListController extends State<ChatList>
           ),
         );
         return;
+      case ChatContextAction.folders:
+        await _editFoldersForRoom(room);
+        return;
       case ChatContextAction.block:
         final inviteEvent = room.getState(
           EventTypes.RoomMember,
@@ -766,6 +796,104 @@ class ChatListController extends State<ChatList>
           future: () => space.setSpaceChild(room.id),
         );
     }
+  }
+
+  Future<void> _editFoldersForRoom(Room room) async {
+    final client = room.client;
+    final l10n = L10n.of(context);
+    if (client.chatFolders.isEmpty) {
+      final name = await showTextInputDialog(
+        useRootNavigator: false,
+        context: context,
+        title: l10n.newFolder,
+        okLabel: l10n.ok,
+        cancelLabel: l10n.cancel,
+      );
+      if (name == null || name.trim().isEmpty) return;
+      await showFutureLoadingDialog(
+        context: context,
+        future: () => client.createChatFolder(name.trim()),
+      );
+    }
+
+    if (!mounted) return;
+
+    final selectedFolderIds = client.chatFolders
+        .where((f) => f.roomIds.contains(room.id))
+        .map((f) => f.id)
+        .toSet();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: false,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxWidth: 512,
+        maxHeight: MediaQuery.sizeOf(context).height - 32,
+      ),
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return SafeArea(
+          child: StatefulBuilder(
+            builder: (ctx, setSheetState) {
+              final currentFolders = client.chatFolders;
+              return ListView(
+                shrinkWrap: true,
+                children: [
+                  ListTile(
+                    title: Text(l10n.folders, style: theme.textTheme.labelSmall),
+                    subtitle: Text(room.getLocalizedDisplayname(
+                      MatrixLocals(l10n),
+                    )),
+                  ),
+                  const Divider(height: 1),
+                  ...currentFolders.map(
+                    (f) => CheckboxListTile(
+                      value: selectedFolderIds.contains(f.id),
+                      title: Text(f.name),
+                      onChanged: (v) async {
+                        final next = v ?? false;
+                        setSheetState(() {
+                          if (next) {
+                            selectedFolderIds.add(f.id);
+                          } else {
+                            selectedFolderIds.remove(f.id);
+                          }
+                        });
+                        await client.setFolderRoomMembership(
+                          folderId: f.id,
+                          roomId: room.id,
+                          isMember: next,
+                        );
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.create_new_folder_outlined),
+                    title: Text(l10n.newFolder),
+                    onTap: () async {
+                      final name = await showTextInputDialog(
+                        useRootNavigator: false,
+                        context: ctx,
+                        title: l10n.newFolder,
+                        okLabel: l10n.ok,
+                        cancelLabel: l10n.cancel,
+                      );
+                      if (name == null || name.trim().isEmpty) return;
+                      await client.createChatFolder(name.trim());
+                      setSheetState(() {});
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   void dismissStatusList() async {
@@ -975,6 +1103,7 @@ enum ChatContextAction {
   favorite,
   markUnread,
   mute,
+  folders,
   archiveChat,
   leave,
   addToSpace,

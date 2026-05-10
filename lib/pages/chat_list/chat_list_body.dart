@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import 'package:go_router/go_router.dart';
 import 'package:matrix/matrix.dart';
 
 import 'package:fluffychat/config/app_config.dart';
@@ -12,10 +13,15 @@ import 'package:fluffychat/pages/chat_list/dummy_chat_list_item.dart';
 import 'package:fluffychat/pages/chat_list/search_title.dart';
 import 'package:fluffychat/pages/chat_list/space_view.dart';
 import 'package:fluffychat/pages/chat_list/status_msg_list.dart';
+import 'package:fluffychat/utils/chat_folders.dart';
 import 'package:fluffychat/utils/stream_extension.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/public_room_dialog.dart';
+import 'package:fluffychat/widgets/adaptive_dialogs/show_modal_action_popup.dart';
+import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
+import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart';
 import 'package:fluffychat/widgets/avatar.dart';
 import '../../config/themes.dart';
+import '../../widgets/future_loading_dialog.dart';
 import '../../widgets/adaptive_dialogs/user_dialog.dart';
 import '../../widgets/matrix.dart';
 import 'chat_list_header.dart';
@@ -171,6 +177,143 @@ class ChatListViewBody extends StatelessWidget {
                       onLongPress: () => controller.dismissStatusList(),
                       child: StatusMessageList(
                         onStatusEdit: controller.setStatus,
+                      ),
+                    ),
+                  if (!controller.isSearchMode &&
+                      client.chatFolders.isNotEmpty &&
+                      !FluffyThemes.isColumnMode(context))
+                    SizedBox(
+                      height: 48,
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                            child: FilterChip(
+                              selected: controller.activeFolderId == null,
+                              onSelected: (_) =>
+                                  controller.setActiveFolder(null),
+                              label: Text(L10n.of(context).all),
+                            ),
+                          ),
+                          ...client.chatFolders.map(
+                            (folder) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4.0,
+                              ),
+                              child: GestureDetector(
+                                onLongPress: () async {
+                                  final l10n = L10n.of(context);
+                                  final action =
+                                      await showModalActionPopup<_FolderChipAction>(
+                                    useRootNavigator: false,
+                                    context: context,
+                                    title: folder.name,
+                                    cancelLabel: l10n.cancel,
+                                    actions: [
+                                      AdaptiveModalAction(
+                                        label: l10n.renameFolder,
+                                        value: _FolderChipAction.rename,
+                                        icon: const Icon(Icons.edit_outlined),
+                                        isDefaultAction: true,
+                                      ),
+                                      AdaptiveModalAction(
+                                        label: l10n.reorderFolders,
+                                        value: _FolderChipAction.reorder,
+                                        icon: const Icon(Icons.drag_handle),
+                                      ),
+                                      AdaptiveModalAction(
+                                        label: l10n.delete,
+                                        value: _FolderChipAction.delete,
+                                        icon: const Icon(Icons.delete_outline),
+                                        isDestructive: true,
+                                      ),
+                                    ],
+                                  );
+                                  if (action == null) return;
+
+                                  final client = Matrix.of(context).client;
+                                  switch (action) {
+                                    case _FolderChipAction.reorder:
+                                      if (context.mounted) {
+                                        context.push('/rooms/chatfolders');
+                                      }
+                                      return;
+                                    case _FolderChipAction.rename:
+                                      final name = await showTextInputDialog(
+                                        useRootNavigator: false,
+                                        context: context,
+                                        title: l10n.renameFolder,
+                                        okLabel: l10n.ok,
+                                        cancelLabel: l10n.cancel,
+                                        initialText: folder.name,
+                                      );
+                                      if (name == null || name.trim().isEmpty) {
+                                        return;
+                                      }
+                                      await showFutureLoadingDialog(
+                                        context: context,
+                                        future: () => client.renameChatFolder(
+                                          folder.id,
+                                          name.trim(),
+                                        ),
+                                      );
+                                      controller.setActiveFolder(
+                                        controller.activeFolderId,
+                                      );
+                                      return;
+                                    case _FolderChipAction.delete:
+                                      final confirmed =
+                                          await showOkCancelAlertDialog(
+                                        useRootNavigator: false,
+                                        context: context,
+                                        title: l10n.areYouSure,
+                                        message: l10n.deleteFolderConfirm,
+                                        okLabel: l10n.delete,
+                                        cancelLabel: l10n.cancel,
+                                        isDestructive: true,
+                                      );
+                                      if (confirmed != OkCancelResult.ok) {
+                                        return;
+                                      }
+                                      await showFutureLoadingDialog(
+                                        context: context,
+                                        future: () =>
+                                            client.deleteChatFolder(folder.id),
+                                      );
+                                      if (controller.activeFolderId ==
+                                          folder.id) {
+                                        controller.setActiveFolder(null);
+                                      } else {
+                                        controller.setActiveFolder(
+                                          controller.activeFolderId,
+                                        );
+                                      }
+                                  }
+                                },
+                                child: FilterChip(
+                                  selected:
+                                      controller.activeFolderId == folder.id,
+                                  onSelected: (_) =>
+                                      controller.setActiveFolder(folder.id),
+                                  label: Text(folder.name),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                            child: ActionChip(
+                              avatar: const Icon(Icons.settings_outlined),
+                              label: Text(L10n.of(context).manageFolders),
+                              onPressed: () => context.push('/rooms/chatfolders'),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   if (client.rooms.isNotEmpty && !controller.isSearchMode)
@@ -338,6 +481,8 @@ class PublicRoomsHorizontalList extends StatelessWidget {
     );
   }
 }
+
+enum _FolderChipAction { rename, reorder, delete }
 
 class _SearchItem extends StatelessWidget {
   final String title;
