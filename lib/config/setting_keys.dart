@@ -53,8 +53,8 @@ enum AppSettings<T> {
   applicationName<String>('chat.fluffy.application_name', 'Wasl'),
   defaultHomeserver<String>(
     'chat.fluffy.default_homeserver',
-    // 'synapse.alhossein.org',
-    'matrix.org',
+    'synapse.alhossein.org',
+    // 'matrix.org',
     // 'https://rtc.matrix.local',
   ),
   // colorSchemeSeed stored as ARGB int

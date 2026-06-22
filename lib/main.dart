@@ -22,7 +22,7 @@ import 'widgets/fluffy_chat_app.dart';
 ReceivePort? mainIsolateReceivePort;
 const _vodozemacWebAssetPrefix = 'assets/vodozemac/';
 const _vodozemacWebWasmPath = './assets/assets/vodozemac/';
- 
+   
 void main() async {
   if (PlatformInfos.isAndroid) {
     final port = mainIsolateReceivePort = ReceivePort();

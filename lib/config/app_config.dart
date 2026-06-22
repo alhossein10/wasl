@@ -10,8 +10,8 @@ abstract class AppConfig {
   static const double messageFontSize = 16.0;
   static const bool allowOtherHomeservers = false;
   static const bool strictSingleHomeserver = true;
-  // static const String forcedHomeserverHost = 'synapse.alhossein.org';
-  static const String forcedHomeserverHost = 'matrix.org';
+  static const String forcedHomeserverHost = 'synapse.alhossein.org';
+  // static const String forcedHomeserverHost = 'matrix.org';
   static const bool enableRegistration = true;
   static const bool hideTypingUsernames = false;
 
